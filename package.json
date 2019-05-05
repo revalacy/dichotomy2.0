@@ -1,0 +1,28 @@
+{
+  "name": "dichotomy",
+  "version": "3.0.0",
+  "description": "A bot for handling roleplay for the GN community.",
+  "main": "dichotomy.js",
+  "scripts": {
+    "start": "node dichotomy.js"
+  },
+  "dependencies": {
+    "express": "^4.16.4",
+    "google-spreadsheet": "^2.0.6",
+    "discord.js": "^11.4.2",
+    "enmap": "^4.5.0",
+    "google-auth-library": "^2.0.1"
+  },
+  "engines": {
+    "node": "8.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/hello-express"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express"
+  ]
+}

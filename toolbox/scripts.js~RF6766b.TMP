@@ -1,0 +1,126 @@
+const async = require ('async');
+const GoogleSpreadsheet = require('google-spreadsheet');
+const creds = require('../client_secret.json');
+    const database = new GoogleSpreadsheet('1VSUPYWzYUgslSK0vQEe-Wh1DD-SwUEmc-Mi7lA-9S8A');
+      database.useServiceAccountAuth(creds, function (err) {
+        if (err)
+        console.log(err)});
+    const doc = new GoogleSpreadsheet('1gttI85xdLuZZmWedz7nemrfBSlotJGD6n_qdcDSgHV0');//DEV Database
+      doc.useServiceAccountAuth(creds, function (err) {
+        if (err)
+        console.log(err)});
+    const olddoc = new GoogleSpreadsheet('1kxcMdb0Gsyg9Oe3NbWMXx1vHopFjqLzneXehoURAN6M');
+        olddoc.useServiceAccountAuth(creds, function (err) {
+          if (err)
+          console.log(err)});
+
+module.exports =  {
+
+gmids: ['142847091411124225','133090921678897152','133350100264157195', '89015728283320320', '106481950499282944', '142847796909834241', '82152330681647104', '143532142469578752', '453297386119233557'],
+
+roll: async function(a, b){//returns number of successes
+  var dice = parseInt(a);
+  var roller = b;
+  var rollsarray = Array.from({length: dice}, () => Math.floor(Math.random() *10) +1);
+    console.log(rollsarray);
+  var botches = rollsarray.filter(x => x === 1).length;
+  var successes = rollsarray.filter(x => x > 6).length;
+  var doubles = rollsarray.filter(x => x === 10).length;
+    successes += doubles;
+  console.log(successes);
+  rollsarray.sort((x, y) => y - x);
+  var rollstring = rollsarray.join(', ');
+  if (successes > 0) botches = 0;
+  if (botches > 0) this.doom(roller, botches);
+  return new Promise(resolve => {
+      resolve([successes, rollstring, botches]);
+  });
+},
+
+filepull: async function(a){
+  var searcharray = a;
+  if (!Array.isArray(searcharray) || searcharray.length === 0 || !searcharray.length) return console.log(`Filepull terminated, an array was not passed to the function.`);
+  var records = await Promise.all(a.map(this.recordpull)).then(function(data){return Promise.all(data)});
+  var success = 0;
+  if (records.findIndex(x => x === 'failed') === -1) success = 1;
+  return new Promise(resolve => resolve([success, records]));
+},
+  
+dbwrite: async function(a){
+    a.forEach(function(object){
+        object.properties = JSON.stringify(object.properties);
+        object.activeeffects = JSON.stringify(object.activeeffects);
+        object.secrets = JSON.stringify(object.secrets);
+        object.investigations = JSON.stringify(object.investigations);
+        object.save();
+    });
+},
+  
+doom: async function(a, b){
+  database.getRows(1, {'query': `label = "${a}"`}, function(err, rows){
+    rows[0].properties = JSON.parse(rows[0].properties);
+    var x = parseInt(rows[0].properties.doom) + b;
+    rows[0].properties.doom = x;
+    rows[0].properties = JSON.stringify(rows[0].properties)
+    rows[0].save();
+  });
+},
+  
+recordpull: async function(label){
+    return new Promise(resolve => {
+      database.getRows(1, {'query': `label = "${label}"`}, function(err, rows){
+        if (typeof rows.length === 'undefined') return resolve('failed');
+        rows.forEach(function(object){
+          console.log(`Parsing data for ${object.label}.`);
+          object.properties = JSON.parse(object.properties);
+          object.activeeffects = JSON.parse(object.activeeffects);
+          object.secrets = JSON.parse(object.secrets);
+          object.investigations = JSON.parse(object.investigations);
+          return resolve(object);
+        });
+    });
+    });
+  },
+
+effects: {
+    exposure: function(sender, recipient, source, parameters){
+        if(recipient.category === "character")recipient.properties.madness.exposure.push(parameters[1]);
+        if(sender.category === "character")sender.properties.madness.exposure.splice(sender.properties.madness.exposure.findIndex(x => x == parameters[1]),1);
+    },
+    statchange: function(sender, recipient, source, parameters){
+        if(recipient.category === "character") recipient.properties.stats[parameters[1]] = +recipient.properties.stats[parameters[1]] + parameters[2];
+        if(sender.category === "character") sender.properties.stats[parameters[0]] = +sender.properties.stats[parameters[0]] - parameters[2];
+    },
+    bonus: function(sender, recipient, source, parameters){
+      if(recipient.category === "character") recipient.properties.bonus[parameters[1]] = +recipient.properties.bonus[parameters[1]] + parameters[2];
+    }
+  },
+
+items: {
+  send: function(sender, recipient, item){
+    sender.properties.inventory.splice(sender.properties.inventory.findIndex(x => x === item.label),1);
+    if (recipient.properties.inventory[0] === "empty" || recipient.properties.inventory[0] === "Empty") recipient.properties.inventory = [];
+    recipient.properties.inventory.push(item.label);
+    item.properties.location[item.properties.location.findIndex(x => x === sender.label)] = recipient.label;
+  },
+  take: function(user){},
+  use: function(user){},
+  discard: function(user){},
+  damage: function(user){},
+  hide: function(user){},
+  repair: function(user){},
+  eat: function(user){},
+  equip: function(user){},
+  },
+
+locations: {
+  enter: function(user){},
+  leave: function(user){},
+  sethome: function(user){},
+  damage: function(user){},
+  repair: function(user){},
+  knock: function(user){},
+  guestlist: function(user){},
+}
+
+}
